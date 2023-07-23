@@ -2,8 +2,6 @@ package tus
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type Uploader struct {
@@ -14,6 +12,7 @@ type Uploader struct {
 	aborted    bool
 	uploadSubs []chan Upload
 	notifyChan chan bool
+	toClose    chan bool
 }
 
 // Subscribes to progress updates.
@@ -40,6 +39,10 @@ func (u *Uploader) Url() string {
 // Offset returns the current offset uploaded.
 func (u *Uploader) Offset() int64 {
 	return u.offset
+}
+
+func (u *Uploader) Close() {
+	u.toClose <- true
 }
 
 // Upload uploads the entire body to the server.
@@ -85,20 +88,22 @@ func (u *Uploader) UploadChunck() error {
 
 	u.notifyChan <- true
 
+	if u.upload.Finished() {
+		u.Close()
+	}
+
 	return nil
 }
 
 // Waits for a signal to broadcast to all subscribers
 func (u *Uploader) broadcastProgress() {
-	for _ = range u.notifyChan {
-		for _, c := range u.uploadSubs {
-			c <- *u.upload
-			fmt.Println("upload")
-			spew.Dump(*u.upload)
-			if u.upload.Finished() {
-				fmt.Println("Closing channel")
-				close(c)
-				return
+	for {
+		select {
+		case <-u.toClose:
+			return
+		case <-u.notifyChan:
+			for _, c := range u.uploadSubs {
+				c <- *u.upload
 			}
 		}
 	}
@@ -107,6 +112,7 @@ func (u *Uploader) broadcastProgress() {
 // NewUploader creates a new Uploader.
 func NewUploader(client *Client, url string, upload *Upload, offset int64) *Uploader {
 	notifyChan := make(chan bool)
+	toClose := make(chan bool)
 
 	uploader := &Uploader{
 		client,
@@ -116,6 +122,7 @@ func NewUploader(client *Client, url string, upload *Upload, offset int64) *Uplo
 		false,
 		nil,
 		notifyChan,
+		toClose,
 	}
 
 	go uploader.broadcastProgress()
