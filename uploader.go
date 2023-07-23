@@ -109,7 +109,7 @@ func NewUploader(client *Client, url string, upload *Upload, offset int64) *Uplo
 		notifyChan,
 	}
 
-	go uploader.broadcastProgress()
+	//go uploader.broadcastProgress()
 
 	return uploader
 }
