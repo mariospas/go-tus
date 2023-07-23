@@ -1,5 +1,7 @@
 package memorystore
 
+import "github.com/mariospas/go-tus"
+
 // MemoryStore implements an in-memory Store.
 type MemoryStore struct {
 	m map[string]string
