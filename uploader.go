@@ -2,6 +2,7 @@ package tus
 
 import (
 	"bytes"
+	"fmt"
 )
 
 type Uploader struct {
@@ -91,6 +92,10 @@ func (u *Uploader) broadcastProgress() {
 	for _ = range u.notifyChan {
 		for _, c := range u.uploadSubs {
 			c <- *u.upload
+			if u.upload.Finished() {
+				fmt.Println("Closing channel")
+				close(c)
+			}
 		}
 	}
 }
