@@ -3,6 +3,7 @@ package tus
 import (
 	"bytes"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Uploader struct {
@@ -92,9 +93,12 @@ func (u *Uploader) broadcastProgress() {
 	for _ = range u.notifyChan {
 		for _, c := range u.uploadSubs {
 			c <- *u.upload
+			fmt.Println("upload")
+			spew.Dump(*u.upload)
 			if u.upload.Finished() {
 				fmt.Println("Closing channel")
 				close(c)
+				return
 			}
 		}
 	}
